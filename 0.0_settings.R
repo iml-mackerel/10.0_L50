@@ -1,10 +1,9 @@
 ##### my packages ################################################################################
 ## CRAN
-cran.packages <- c('ggplot2','gridExtra','viridis','dplyr','plyr','reshape2','lubridate')
+cran.packages <- c('ggplot2','gridExtra','viridis','dplyr','plyr','reshape2','lubridate','car','boot')
 install.this <- cran.packages[!(cran.packages %in% utils::installed.packages()[,"Package"])]
 if(length(install.this)>1) install.packages(install.this)
 dummy <- lapply(cran.packages, require, character.only = TRUE)
-
 
 ## github
 git.packages <- c('catchR','DFOdata','CCAM')
@@ -24,3 +23,6 @@ invisible(sapply(list.files(pattern="[.]R$", path="R/", full.names=TRUE), source
 ##### my ggplot theme ################################################################################
 theme_set(theme_mackerel())             # theme_mackerel from catchR
 update_geom_defaults("line", list(size = 1))  # no idea why somethimes I get fat lines otherwise
+
+##### passwords databases #############################################################################
+source('passwords.R')

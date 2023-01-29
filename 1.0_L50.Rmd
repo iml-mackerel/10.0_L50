@@ -15,7 +15,7 @@ output:
 
 ```{r markdown, echo=F}
 library(knitr)
-opts_chunk$set(echo = T, collapse = T, fig.align = "center", fig.width = 9, fig.height = 6)
+opts_chunk$set(echo = T, collapse = T, fig.align = "center", fig.width = 9, fig.height = 6,warning = FALSE, message = FALSE)
 options(width = 300)
 ```    
 
@@ -28,7 +28,7 @@ source('0.0_settings.R')
 ```{r read, message = F}
 new <- FALSE
 if(new){
-    bio <- get.bio(species='maquereau',user="pec_iml_ro",password="Pecimlro_1!")
+    bio <- get.bio(species='maquereau',user=imlp.user,password=imlp.pass)
     f <- paste0('Rdata/bio_',Sys.Date(),'.Rdata')
     save(bio,file=f)
 }else{
@@ -158,11 +158,9 @@ prop.mat <- prop.mat[prop.mat$year!=1973,]
 d <- bio.l50[bio.l50$month %in% 5:7,]
 
 # functions
-library(car)
-
 get.prop <- function(cf,p=0.5){
   (log(p/(1-p))-cf[1])/cf[2]
-} 
+}
 
 get.l50 <- function(x,p=0.5){
     cf <- coef(x)
@@ -172,66 +170,80 @@ get.l50 <- function(x,p=0.5){
 }
 
 # fit (overall: mostly method testing)
-mod <- glm(mat~length,data=d,family = binomial(link=logit))
-set.seed(123)
-boot <- Boot(mod, R=999)
-bootl <- apply(boot$t,1,get.prop)
-bootq <- quantile(bootl,c(0.025,0.975)) 
-ret <- c(get.l50(mod),coef(mod))
-
-plot.new()
-plot(mat~length,data=d,xlim=c(0,max(bio.l50$length,na.rm = TRUE)))
-l <- seq(min(bio.l50$length),max(bio.l50$length),1)
-m <-predict(mod,list(length=l),type='response')
-lines(l, m,col='red',lwd=3)
-abline(h=0.5,col='grey',lty=3)
-abline(v=ret[1],col='grey',lty=3)
+# mod <- glm(mat~length,data=d,family = binomial(link=logit))
+# set.seed(123)
+# boot <- Boot(mod, R=999)
+# bootl <- apply(boot$t,1,get.prop)
+# bootq <- quantile(bootl,c(0.025,0.975))
+# ret <- c(get.l50(mod),coef(mod))
+# 
+# 
+# plot.new()
+# plot(mat~length,data=d,xlim=c(0,max(bio.l50$length,na.rm = TRUE)))
+# l <- seq(min(bio.l50$length),max(bio.l50$length),1)
+# m <-predict(mod,list(length=l),type='response')
+# lines(l, m,col='red',lwd=3)
+# abline(h=0.5,col='grey',lty=3)
+# abline(v=ret[1],col='grey',lty=3)
 ```
 
 ## Annual
 ```{r calcs_annual, message = F}
-
-# data frame to hold predictions
-preds <- expand.grid(cohort=unique(d$cohort),length=seq(min(d$length),max(d$length),1),pred=NA)
-
-# fit annual model
-l50 <- ddply(d,c('cohort'),function(x){
-    co <- unique(x$cohort)
-    x<<-x
-    #print(co)
-    tab <- c(mat=nrow(x[x$mat==1,]),immat=nrow(x[x$mat==0,]),tot=nrow(x))
-    mod <- suppressWarnings(try(glm(mat~length,data=x,family = binomial(link=logit)), silent=TRUE))
-    if ('try-error' %in% class(mod)){ 
-        ret <- c(l50=NA,low=NA,high=NA,'(Intercept)'=NA,length=NA)
-    }else{
-      set.seed(123)
-      boot <- suppressWarnings(try(Boot(mod, R=999), silent=TRUE))
-        if (!'try-error' %in% class(mod)){ 
-          bootl <- apply(boot$t,1,get.prop)
-          bootq <- quantile(bootl,c(0.025,0.975)) 
-          ret <- c(get.l50(mod),low=bootq[1],high=bootq[2],coef(mod))
+if(new){
+        # data frame to hold predictions
+    preds <- expand.grid(cohort=unique(d$cohort),length=seq(min(d$length),max(d$length),1),pred=NA)
+    
+    # fit annual model
+    l50 <- ddply(d,c('cohort'),function(x){
+        co <- unique(x$cohort)
+        tab <- c(mat=nrow(x[x$mat==1,]),immat=nrow(x[x$mat==0,]),tot=nrow(x))
+        mod <- suppressWarnings(try(glm(mat~length,data=x,family = binomial(link=logit)), silent=TRUE))
+        if ('try-error' %in% class(mod)){ 
+            ret <- c(l50=NA,low=NA,high=NA,'(Intercept)'=NA,length=NA)
         }else{
-          ret <- c(get.l50(mod),low=NA,high=NA,coef(mod))
+          set.seed(123)
+          boot <- suppressWarnings(try(Boot(mod, R=999), silent=TRUE))
+            if (!'try-error' %in% class(mod)){ 
+              bootl <- apply(boot$t,1,get.prop)
+              bootq <- quantile(bootl,c(0.025,0.975)) 
+              ret <- c(get.l50(mod),low=bootq[1],high=bootq[2],coef(mod))
+            }else{
+              ret <- c(get.l50(mod),low=NA,high=NA,coef(mod))
+            }
+            preds[preds$cohort==co,'pred'] <<- predict(mod,list(length=preds[preds$cohort==co,'length']),type='response')
         }
-        preds[preds$cohort==co,'pred'] <<- predict(mod,list(length=preds[preds$cohort==co,'length']),type='response')
-    }
-    return(c(ret,tab))
-})
+        return(c(ret,tab))
+    })
+    
+    # remove poor fits
+    this.l50 <- l50[l50$immat>=10,]               # insufficient data
+    this.l50 <- this.l50[this.l50$cohort!=1990,]  # poor model fit (poor data)
+    names(this.l50)[3:4] <- c('low','high')
+    
+    # save outputs
+    f <- paste0('Rdata/l50_',Sys.Date(),'.Rdata')
+    save(this.l50,file=f)
+    
+    f <- paste0('Rdata/l50preds_',Sys.Date(),'.Rdata')
+    save(preds,file=f)
+    
+    f <- paste0('csv/l50_',Sys.Date(),'.csv')
+    this.l50$l50 <- round(this.l50$l50,0)
+    this.l50$low <- round(this.l50$low,0)
+    this.l50$high <- round(this.l50$high,0)
+    write.csv(this.l50,file=f,row.names = FALSE)
+}else{
+    dfn <- file.info(list.files("Rdata/", full.names = T,pattern="l50_"))
+    load(rownames(dfn)[which.max(dfn$mtime)])
+    
+    dfn <- file.info(list.files("Rdata/", full.names = T,pattern="l50preds_"))
+    load(rownames(dfn)[which.max(dfn$mtime)])
+    
+    dfn <- file.info(list.files("csv/", full.names = T,pattern="l50_"))
+    this.l50 <- read.csv(rownames(dfn)[which.max(dfn$mtime)])
+    print(rownames(dfn)[which.max(dfn$mtime)])
+}
 
-# remove poor fits
-this.l50 <- l50[l50$immat>=10,]               # insufficient data
-this.l50 <- this.l50[this.l50$cohort!=1990,]  # poor model fit (poor data)
-names(this.l50)[3:4] <- c('low','high')
-
-# save outputs
-f <- paste0('Rdata/l50_',Sys.Date(),'.Rdata')
-save(this.l50,file=f)
-
-f <- paste0('Rdata/l50preds_',Sys.Date(),'.Rdata')
-save(preds,file=f)
-
-f <- paste0('out/l50_',Sys.Date(),'.csv')
-write.csv(this.l50,file=f)
 
 # info
 mean(this.l50$l50)
