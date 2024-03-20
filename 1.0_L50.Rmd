@@ -277,6 +277,13 @@ g
 
 f <- paste0('img/l50_',Sys.Date(),'.png')
 ggsave(f,g,'png',width = 20,height = 8,units = 'cm')
+
+gfr <- g+
+    geom_text(aes(label='  n (totale)',y=Inf,x=-Inf),vjust=3,size=1.6,hjust=0)+
+    labs(y="L50 (mm)",x='Cohorte')
+f <- paste0('img/l50_',Sys.Date(),'_FR.png')
+ggsave(f,gfr,'png',width = 20,height = 8,units = 'cm')
+
 ```
 
 ### fits
