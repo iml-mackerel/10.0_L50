@@ -1,6 +1,6 @@
 ##### my packages ################################################################################
 ## CRAN
-cran.packages <- c('ggplot2','gridExtra','viridis','dplyr','plyr','reshape2','lubridate','car','boot')
+cran.packages <- c('ggplot2','gridExtra','viridis','dplyr', 'tidymodels','plyr','reshape2','lubridate','car','boot' )
 install.this <- cran.packages[!(cran.packages %in% utils::installed.packages()[,"Package"])]
 if(length(install.this)>1) install.packages(install.this)
 dummy <- lapply(cran.packages, require, character.only = TRUE)
