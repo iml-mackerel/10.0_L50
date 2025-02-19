@@ -2,8 +2,7 @@
 
 
 The rmarkdown output can be previewed at (note that this is slow and does not include all functionalities):
-https://htmlpreview.github.io/?https://raw.githubusercontent.com/iml-mackerel/10.0_L50/master/1.0_L50.html
+https://htmlpreview.github.io/?https://raw.githubusercontent.com/iml-mackerel/10.0_L50/master/1.0_L50/2024/1.0_L50.html
 
-todo: site and html in docs subfolder. subfolders per year. keep french fig?
 
 
